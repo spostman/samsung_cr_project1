@@ -32,19 +32,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Test.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="chat_server.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="message_types.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="chat_message.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="chat_room.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="account_database.h">
@@ -64,13 +55,13 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="accounts.txt">
+    <Text Include="chat_accounts_sample.txt">
       <Filter>Resource Files</Filter>
     </Text>
-    <Text Include="chat_messages.txt">
+    <Text Include="chat_rooms_sample.txt">
       <Filter>Resource Files</Filter>
     </Text>
-    <Text Include="chat_rooms.txt">
+    <Text Include="chat_messages_sample.txt">
       <Filter>Resource Files</Filter>
     </Text>
   </ItemGroup>

@@ -1,0 +1,12 @@
+﻿  account_database_test.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_server_tests\account_database_test.cc(5): fatal error C1083: Cannot open include file: 'gtest/gtest.h': No such file or directory
+  chat_database_test.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_server_tests\chat_database_test.cc(5): fatal error C1083: Cannot open include file: 'gtest/gtest.h': No such file or directory
+  chat_server_test_delete_methods.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_server_tests\chat_server_test_delete_methods.cc(5): fatal error C1083: Cannot open include file: 'chat_server.h': No such file or directory
+  chat_server_test_get_methods.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_server_tests\chat_server_test_get_methods.cc(5): fatal error C1083: Cannot open include file: 'chat_server.h': No such file or directory
+  chat_server_test_post_methods.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_server_tests\chat_server_test_post_methods.cc(5): fatal error C1083: Cannot open include file: 'chat_server.h': No such file or directory
+  session_manager_test.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_server_tests\session_manager_test.cc(5): fatal error C1083: Cannot open include file: 'gtest/gtest.h': No such file or directory

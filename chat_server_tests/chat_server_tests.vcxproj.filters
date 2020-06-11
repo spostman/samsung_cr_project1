@@ -21,7 +21,6 @@
     <Text Include="accounts.txt">
       <Filter>Resource Files</Filter>
     </Text>
-    <Text Include="..\chat_server\chat_rooms.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -36,5 +35,19 @@
     <ClCompile Include="session_manager_test.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="chat_server_test_get_methods.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="chat_server_test_post_methods.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="chat_server_test_delete_methods.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="chat_server_test_fixture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,14 +1,19 @@
 # samsung_cr_project1
+Implementing C++ chat server/client using REST API.
 
-Versions
- - visual studio 2017
+# System environments
+ - visual studio 2017 (Debug/Release, x86)
  - spdlog-1.5.0
  - googletest-release-1.8.1
  - cpprestsdk.v.141
 
-ToDo
- - Install cpprestsdk for every projects without google_test_framework.
- - Modify basic_types.h of cpprestsdk for every visual studio projects in External Dependencies. It can crash with googletest and spdlog.
+# Cautions
+ - Please use Debug/Release, x86 mode in Visual Studio, when you run this project.
+ - When adding a new class to chat_client and chat_server, please add the class name in <Configuration Properties → Linker → Input → Additional Dependencies> of its test project.
+ - Build the chat_client, chat_server project before running the test.
+ 
+# ToDo: When you re-install or update cpprestsdk
+ - Modify basic_types.h of cpprestsdk for every visual studio project in External Dependencies. It can crash with googletest and spdlog.
  - basic_types.h: line 83 ~ 88 should be modified as follows.
  ```cpp
     #ifndef _TURN_OFF_PLATFORM_STRING

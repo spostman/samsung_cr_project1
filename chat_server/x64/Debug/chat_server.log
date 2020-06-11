@@ -1,0 +1,19 @@
+﻿  chat_database.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\devlib\spdlog-1.5.0\include\spdlog\details\circular_q.h : warning C4819: The file contains a character that cannot be represented in the current code page (949). Save the file in Unicode format to prevent data loss
+  chat_server.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\devlib\spdlog-1.5.0\include\spdlog\details\circular_q.h : warning C4819: The file contains a character that cannot be represented in the current code page (949). Save the file in Unicode format to prevent data loss
+  account_database.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\devlib\spdlog-1.5.0\include\spdlog\details\circular_q.h : warning C4819: The file contains a character that cannot be represented in the current code page (949). Save the file in Unicode format to prevent data loss
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_server\account_database.cc(75): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_server\account_database.cc(75): warning C4267: 'initializing': conversion from 'size_t' to 'const int', possible loss of data
+  main.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\devlib\spdlog-1.5.0\include\spdlog\details\circular_q.h : warning C4819: The file contains a character that cannot be represented in the current code page (949). Save the file in Unicode format to prevent data loss
+  session_manager.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\devlib\spdlog-1.5.0\include\spdlog\details\circular_q.h : warning C4819: The file contains a character that cannot be represented in the current code page (949). Save the file in Unicode format to prevent data loss
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_server\session_manager.cc(94): warning C4267: 'argument': conversion from 'size_t' to '_Ty', possible loss of data
+          with
+          [
+              _Ty=int
+          ]
+  Generating Code...
+  chat_server.vcxproj -> C:\Users\SooelSon\Documents\repo\samsung_cr_project1\x64\Debug\chat_server.exe

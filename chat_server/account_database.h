@@ -10,66 +10,74 @@
 
 #include "cpprest/json.h"
 
+// This class is designed to manage pairs of chat ID and password accounts.
+// It uses a file database that holds IDs and passwords.
+// Example:
+//   AccountDatabase account_database;
+//   account_database.Initialize("account_db.txt");
+//   AuthResult login_result = account_database.Login(id, password);
+//   if (login_result == kAuthSuccess) {
+//     do something after login success.
+//   } else if (login_result == kIDNotExist) {
+//     do something with a non-registered id.
+//   } else if (login_result == kPasswordError) {
+//     do something with failed login attempts with wrong passwords.
+//   }
+// The usage of the AuthResult functions is similar to the above.
+
 namespace chatserver {
 
-  // This class is designed to manage pairs of chat ID and password accounts.
-  // It use file database for storing ID and password.
-  // Example:
-  //   AccountDatabase account_database;
-  //   account_database.Initialize("account_db.txt");
-  //   auto login_result = account_database.Login(id, password);
-  //   if(login_result == kLoginSuccess) {
-  //     do something to success login
-  //   } else if (login_result == kIDNotExist) {
-  //     do something to fail login with a non-registered id
-  //   } else if (login_result == kPasswordError) {
-  //     do something to fail login with a password error
-  //   }
-  // The usage with SignUp and SignUpResult function are similar to the above.
-
   class AccountDatabase {
-  public:
-    // Return values of Login function.
+   public:
+    // Return values of SignUp and Login function.
     typedef enum {
-      kLoginSuccess,
+      kAuthSuccess,
+      // Prohibited parsing delimiter is in ID.
+      kProhibitedCharInID,  
+      // Prohibited parsing delimiter is in password.
+      kProhibitedCharInPassword,  
+      kDuplicateID,
+      kAccountWriteError,
       kIDNotExist,
       kPasswordError
-    } LoginResult;
-
-    // Return values of SignUp function.
-    typedef enum {
-      kSignUpSuccess,
-      kProhibitedCharInID,  // Parsing delimiter is prohibited in ID.
-      kDuplicateID,
-      kAccountWriteError
-    } SignUpResult;
+    } AuthResult;
 
     // Read IDs and passwords from the given file into database.
-    bool Initialize(const utility::string_t account_file);
-    // Check if there is a given ID and password in the database.
-    LoginResult Login(const utility::string_t id,
-                      const utility::string_t password);
-    // Create a chat account on the database 
-    SignUpResult SignUp(const utility::string_t id,
-                        const utility::string_t password);
-    // Delimiter between id and password in a file database.
-    const utility::string_t kParsingDelimeter = UU(",");
+    bool Initialize(utility::string_t account_file);
 
-  private:
+    // Check if there is a given ID and password in the database.
+    AuthResult Login(utility::string_t id,
+                      utility::string_t password,
+                      utility::string_t nonce);
+
+    // Create a chat account on the database 
+    AuthResult SignUp(utility::string_t id,
+                        utility::string_t password);
+
+   private:
     // Read the given database file
-    bool ReadAccountFile(const utility::string_t account_file);
-    // Parse file database. Parsing format: id,pw.
+    bool ReadAccountFile(utility::string_t account_file);
+
+    // Parse file database. Parsing format: id, hash(pwd).
     bool ParseAccountFile(std::wifstream account_file);
+
     // Save account information to account database and file.
-    bool StoreAccountInformation(const utility::string_t id,
-                                 const utility::string_t password);
+    bool StoreAccountInformation(utility::string_t id,
+                                 utility::string_t password);
+
     // Check given ID exists on database.
-    bool IsExistAccount(const utility::string_t id);
+    bool IsExistAccount(utility::string_t id) const;
+
+    // Hash string.
+    utility::string_t HashString(utility::string_t string) const;
 
     // Account database: std::map<ID, pwd>
     std::map<utility::string_t, utility::string_t> accounts_;
+
     // File database name.
     utility::string_t account_file_;
   };
+
 } // namespace chatserver
+
 #endif CHATSERVER_ACCOUNTDATABASE_H_ // CHATSERVER_ACCOUNTDATABASE_H_

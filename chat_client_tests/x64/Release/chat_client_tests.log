@@ -1,0 +1,4 @@
+﻿  chat_client_test.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_client_tests\chat_client_test.cc(5): fatal error C1083: Cannot open include file: 'chat_client.h': No such file or directory
+  chat_room_test.cc
+c:\users\sooelson\documents\repo\samsung_cr_project1\chat_client_tests\chat_room_test.cc(5): fatal error C1083: Cannot open include file: 'chat_client.h': No such file or directory

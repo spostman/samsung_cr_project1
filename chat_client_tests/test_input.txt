@@ -1,0 +1,8 @@
+login
+kaist
+12345678
+join
+abc
+test|
+quit
+exit

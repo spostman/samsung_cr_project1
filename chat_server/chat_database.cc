@@ -1,3 +1,7 @@
+// Code review content development project.
+// Code style follows Google C++ Style Guide.
+// (https://google.github.io/styleguide/cppguide.html)
+
 #include "chat_database.h"
 
 #include "cpprest/asyncrt_utils.h"
@@ -9,6 +13,9 @@ namespace chatserver {
   using ::utility::conversions::to_utf8string;
   using ::utility::string_t;
   using ::spdlog::error;
+
+  // Delimiter in the chat message file database.
+  const string_t kParsingDelimiter = UU("|");
 
   bool ChatDatabase::Initialize(string_t chat_message_file,
                                 string_t chat_room_file) {
@@ -29,14 +36,18 @@ namespace chatserver {
     return true;
   }
 
-  bool ChatDatabase::StoreChatMessage(ChatMessage message) {
-    wofstream file(chat_message_file_,
-                   wofstream::out | wofstream::app);
+  bool ChatDatabase::StoreChatMessage(const ChatMessage& message) {
+    if(!DoesDelimiterExistInChatMessage(message)) {
+      error("Prohibited char in the chat message, chat room or user ID.");
+      return false;
+    }
+    
+    wofstream file(chat_message_file_, wofstream::out | wofstream::app);
     if (file.is_open()) {
       // File format: date|user_id|chat_room|chat_message
-      file << message.date << kParsingDelimeter
-           << message.user_id << kParsingDelimeter
-           << message.chat_room << kParsingDelimeter
+      file << message.date << kParsingDelimiter
+           << message.user_id << kParsingDelimiter
+           << message.chat_room << kParsingDelimiter
            << message.chat_message << endl;
       file.close();
       chat_messages_[message.chat_room].push_back(message);
@@ -47,21 +58,25 @@ namespace chatserver {
     return true;
   }
 
-  const vector<ChatMessage>& ChatDatabase::GetAllChatMessages(
+  const vector<ChatMessage>* ChatDatabase::GetAllChatMessages(
       string_t chat_room) {
-    if(chat_messages_.find(chat_room) != chat_messages_.end()) {
-      return chat_messages_[chat_room];
+    if (chat_messages_.find(chat_room) != chat_messages_.end()) {
+      return &chat_messages_[chat_room];
     } else {
       static vector<ChatMessage> chat_messages;
-      return chat_messages;
+      return &chat_messages;
     }
   }
 
   bool ChatDatabase::CreateChatRoom(string_t chat_room) {
     if (chat_room.size() == 0) {
-      error("Chat room name cannot be zero length");
+      error("Chat room name cannot be zero length.");
+      return false;
     } else if (IsExistChatRoom(chat_room)) {
-      error("Chat room name already exists");
+      error("Chat room name already exists.");
+      return false;
+    } else if(chat_room.find(kParsingDelimiter) != string_t::npos) {
+      error("Prohibited char in the chat room.");
       return false;
     }
 
@@ -86,8 +101,8 @@ namespace chatserver {
     }
   }
 
-  const vector<string_t>& ChatDatabase::GetChatRoomList() const{
-    return chat_rooms_;
+  const vector<string_t>* ChatDatabase::GetChatRoomList() const{
+    return &chat_rooms_;
   }
 
   bool ChatDatabase::ReadChatMessagesFromFileDatabase(
@@ -108,6 +123,15 @@ namespace chatserver {
     return true;
   }
 
+  bool ChatDatabase::DoesDelimiterExistInChatMessage(const ChatMessage& message) {
+    if (message.chat_message.find(kParsingDelimiter) != string_t::npos ||
+      message.user_id.find(kParsingDelimiter) != string_t::npos ||
+      message.chat_room.find(kParsingDelimiter) != string_t::npos) {
+      return false;
+    }
+    return true;
+  }
+
   bool ChatDatabase::ParsingChatMessageFile(wifstream chat_message_file) {
     string_t line;
     while (chat_message_file.good()) {
@@ -120,7 +144,7 @@ namespace chatserver {
 
       // Parsing format: date|user_id|chat_room|chat_message
       for (auto i = 0; i < 3; i++) {
-        end_index = line.find(kParsingDelimeter, start_index);
+        end_index = line.find(kParsingDelimiter, start_index);
         if (end_index == start_index) {
           error("Chat message file parsing error");
           return false;
@@ -145,7 +169,7 @@ namespace chatserver {
 
       message.chat_message = line.substr(start_index);
       // Too many delimiters in the line.
-      if (message.chat_message.find(kParsingDelimeter) != string_t::npos) {
+      if (message.chat_message.find(kParsingDelimiter) != string_t::npos) {
         error("Chat message file parsing error");
         return false;
       }
@@ -175,4 +199,5 @@ namespace chatserver {
     file.close();
     return true;
   }
+
 } // namespace chatserver

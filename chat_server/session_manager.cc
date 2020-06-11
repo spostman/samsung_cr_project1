@@ -1,27 +1,44 @@
+// Code review content development project.
+// Code style follows Google C++ Style Guide.
+// (https://google.github.io/styleguide/cppguide.html)
+
 #include "session_manager.h"
 
 #include <chrono>
-#include <random>
+#include <future>
 
 #include "cpprest/asyncrt_utils.h"
 #include "spdlog/spdlog.h"
 
 using namespace std;
-using ::chrono::system_clock;
-using ::chrono::duration;
+using chrono::system_clock;
+using chrono::duration;
 using ::utility::conversions::to_utf8string;
 using ::utility::string_t;
 using ::spdlog::info;
 
 namespace chatserver {
-  // Session alive time (second)
-  const time_t kSessionAliveTime = 10;
-  // Length of session id
-  const size_t kSessionLength = 32;
-  // Period to check session expire (second)
-  const time_t kSessionCheckInterval = 3;
 
-  bool SessionManager::IsExistSessionID(string_t session_id) {
+  // Session alive time (second).
+  const time_t kSessionAliveTime = 30;
+  // Length of session id.
+  const size_t kSessionLength = 32;
+  // Period to check session expire (second).
+  const time_t kSessionCheckInterval = 1;
+  // Session seed.
+  const string_t kSessionValue = UU(
+      "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+
+  SessionManager::SessionManager()
+      : rand_(std::random_device{}()),
+        session_generator_(0, kSessionValue.size() - 1) {
+  }
+
+  SessionManager::~SessionManager() {
+    run_thread_ = false;
+  }
+
+  bool SessionManager::IsExistSessionId(string_t session_id) {
     const lock_guard<mutex> lock(mutex_sessions_);
 
     if (sessions_.find(session_id) == sessions_.end()) {
@@ -36,15 +53,13 @@ namespace chatserver {
 
     // If user ID exists, update session active time
     if (user_id_to_session_id_.find(user_id) != user_id_to_session_id_.end()) {
-      sessions_[user_id_to_session_id_[user_id]].session_id = 
-          GenerateSessionID();
       sessions_[user_id_to_session_id_[user_id]].last_activity_time = 
           system_clock::to_time_t(system_clock::now());
       return sessions_[user_id_to_session_id_[user_id]];
     }
 
     Session new_session;
-    new_session.session_id = GenerateSessionID();
+    new_session.session_id = GenerateSessionId();
     new_session.user_id = user_id;
     new_session.last_activity_time = system_clock::to_time_t(
         system_clock::now());
@@ -56,7 +71,7 @@ namespace chatserver {
 
   bool SessionManager::DeleteSession(string_t session_id) {
     const lock_guard<mutex> lock(mutex_sessions_);
-    if(sessions_.find(session_id) == sessions_.end()) {
+    if (sessions_.find(session_id) == sessions_.end()) {
       return false;
     } else {
       user_id_to_session_id_.erase(sessions_[session_id].user_id);
@@ -77,22 +92,15 @@ namespace chatserver {
     }
   }
 
-  const string_t SessionManager::GenerateSessionID() const {
-    static string_t session_values = UU(
-        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
-    random_device rd;
-    mt19937 rand(rd());
-    const uniform_int_distribution<> session_generator(
-        0, session_values.size() - 1);
-
+  const string_t SessionManager::GenerateSessionId() {
     string_t result;
     for (size_t i = 0; i < kSessionLength; i++) {
-      result += session_values.at(session_generator(rand));
+      result += kSessionValue.at(session_generator_(rand_));
     }
     return result;
   }
 
-  bool SessionManager::GetUserIDFromSessionID(string_t session_id, 
+  bool SessionManager::GetUserIDFromSessionId(string_t session_id, 
                                               string_t* out_user_id) {
     if (out_user_id == nullptr)
       return false;
@@ -108,18 +116,19 @@ namespace chatserver {
   }
 
   void SessionManager::RunSessionExpireThread() {
-    thread t1(&SessionManager::CheckExpiredSession, this);
-    t1.detach();
+    run_thread_ = true;
+    // Getting return value is necessary to run async thread,
+    // but the return value is not used.
+    async_thread_result_ = async(launch::async,
+        &SessionManager::CheckAndDeleteExpiredSession, this);
   }
 
-  void SessionManager::CheckExpiredSession() {
-    
-    while (true) {
-      // Remove expired session every kSessionCheckInterval
+  void SessionManager::CheckAndDeleteExpiredSession() {
+    while (run_thread_) {
+      // Remove expired sessions every kSessionCheckInterval
       this_thread::sleep_for(duration<int>(kSessionCheckInterval));
       {
         const lock_guard<mutex> lock(mutex_sessions_);
-        info("Try to find expired sessions");
         auto current_time = system_clock::now();
         for (auto it = sessions_.cbegin(); it != sessions_.cend();) {
           duration<double> diff = current_time -
@@ -137,4 +146,5 @@ namespace chatserver {
       }
     }
   }
+
 } // namespace chatserver
