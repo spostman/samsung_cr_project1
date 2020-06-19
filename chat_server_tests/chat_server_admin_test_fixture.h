@@ -12,54 +12,36 @@
 namespace chatservertests {
 
   // Fixture class for the testing chat_server.cc
-  class ChatServerTest : public ::testing::Test {
+  class ChatServerAdminTest : public ::testing::Test {
    protected:
     std::unique_ptr<chatserver::ChatServer> chat_server_;
     std::unique_ptr<web::http::client::http_client> http_client_;
-
-    // Delimiter between id and password in a file database.
-    utility::string_t kParsingDelimeterAccount = UU(",");
-    // Delimiter in the chat message file database.
-    utility::string_t kParsingDelimeterChatDb = UU("|");
 
     // Length of nonce
     const size_t kNonceLength = 10;
     // Nonce seed.
     const utility::string_t kNonceValue = UU(
-      "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
 
     void SetUp() override {
       // Create chat message file for ChatDatabase class.
-      const utility::string_t chat_message_file_name = 
+      const utility::string_t chat_message_file_name =
           UU("chat_message_test_chat_server.txt");
-      std::wofstream file(chat_message_file_name, 
-                          std::wofstream::out | std::ofstream::trunc);
-      file << "1583134930" << "|" << "kaist" << "|" << "1" << "|"
+      std::wofstream file(chat_message_file_name,
+          std::wofstream::out | std::ofstream::trunc);
+      file << "1583134930" << "|" << "samsung" << "|" << "1" << "|"
            << "hello" << std::endl;
-      file << "1583134935" << "|" << "wsp" << "|" << "1" << "|"
-           << "hi" << std::endl;
-      file << "1583134940" << "|" << "gsis" << "|" << "1" << "|"
-           << "nice to meet you" << std::endl;
-      file << "1583134955" << "|" << "kaist" << "|" << "1" << "|"
-           << "hello!!! hihi" << std::endl;
-      file << "1583134945" << "|" << "kaist" << "|" << "2" << "|"
+      file << "1583134945" << "|" << "samsung" << "|" << "2" << "|"
            << "hello~!" << std::endl;
-      file << "1583134950" << "|" << "wsp" << "|" << "3" << "|"
-           << "hello :)" << std::endl;
-      file << "1583134955" << "|" << "gsis" << "|" << "abc" << "|"
-           << "hello!!!" << std::endl;
-      
       file.close();
 
       // Create chat room file for ChatDatabase class.
-      const utility::string_t chat_room_file_name = 
+      const utility::string_t chat_room_file_name =
           UU("chat_room_test_chat_server.txt");
-      file.open(chat_room_file_name, 
-                std::wofstream::out | std::ofstream::trunc);
+      file.open(chat_room_file_name,
+          std::wofstream::out | std::ofstream::trunc);
       file << "1" << std::endl;
       file << "2" << std::endl;
-      file << "3" << std::endl;
-      file << "abc" << std::endl;
       file.close();
 
       chat_database_ = std::make_unique<chatserver::ChatDatabase>();
@@ -67,26 +49,23 @@ namespace chatservertests {
                                  UU("chat_room_test_chat_server.txt"));
 
       // Setup account file.
-      const utility::string_t account_file_name = 
+      const utility::string_t account_file_name =
           UU("accounts_test_chat_server.txt");
       file.open(account_file_name, std::wofstream::out | std::ofstream::trunc);
-      file << "kaist" << "," << HashString(UU("12345678")) << std::endl;
-      file << "wsp" << "," << HashString(UU("abcdefgh")) << std::endl;
-      file << "gsis" << "," << HashString(UU("!@#$%^&*")) << std::endl;
-      file << "lab  w sp" << "," << HashString(UU("12345678")) << std::endl;
-      file << "lab !@.#$% hi" << "," << HashString(UU("!@#$%^&*")) << std::endl;
+      file << "samsung" << "," << HashString(UU("12345678")) << std::endl;
+      file << "galaxy" << "," << HashString(UU("abcdefgh")) << std::endl;
       file.close();
 
       account_database_ = std::make_unique<chatserver::AccountDatabase>();
       account_database_->Initialize(UU("accounts_test_chat_server.txt"));
 
       session_manager_ = std::make_unique<chatserver::SessionManager>();
-        
+
       // Start the chat server.
-      chat_server_ = 
+      chat_server_ =
           std::make_unique<chatserver::ChatServer>(chat_database_.get(),
-                                                   account_database_.get(),
-                                                   session_manager_.get());
+          account_database_.get(),
+          session_manager_.get());
       utility::string_t address = UU("http://localhost:34568/chat");
       chat_server_->Initialize(address);
       concurrency::task_status::completed, chat_server_->OpenServer().wait();
@@ -103,8 +82,8 @@ namespace chatservertests {
       remove("chat_room_test_chat_server.txt");
     }
 
-    utility::string_t HashLoginPassword(utility::string_t password, 
-                                        utility::string_t nonce) const {
+    utility::string_t HashLoginPassword(utility::string_t password,
+      utility::string_t nonce) const {
       return HashString(HashString(password) + nonce);
     }
 
@@ -130,14 +109,14 @@ namespace chatservertests {
       const utility::string_t nonce = GenerateNonce();
       buf << "login";
       web::json::value body_data;
-      body_data[UU("id")] = web::json::value::string(UU("kaist"));
+      body_data[UU("id")] = web::json::value::string(UU("samsung"));
       body_data[UU("nonce")] = web::json::value::string(nonce);
       body_data[UU("password")] =
-            web::json::value::string(HashLoginPassword(UU("12345678"), nonce));
+          web::json::value::string(HashLoginPassword(UU("12345678"), nonce));
       web::http::http_response response = http_client_->request(
-            web::http::methods::POST, 
-            web::uri::encode_uri(buf.str()), 
-            body_data).get();
+          web::http::methods::POST,
+          web::uri::encode_uri(buf.str()),
+          body_data).get();
       web::json::value object = response.extract_json().get();
       return object[UU("session_id")].as_string();
     }

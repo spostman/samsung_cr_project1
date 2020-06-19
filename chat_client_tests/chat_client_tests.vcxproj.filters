@@ -21,6 +21,9 @@
     <ClCompile Include="chat_room_test.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="chat_client_admin_test.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config">
@@ -29,6 +32,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="chat_client_test_fixture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="chat_client_admin_test_fixture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

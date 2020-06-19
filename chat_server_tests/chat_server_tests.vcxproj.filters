@@ -44,9 +44,15 @@
     <ClCompile Include="chat_server_test_delete_methods.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="chat_server_admin_test.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="chat_server_test_fixture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="chat_server_admin_test_fixture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

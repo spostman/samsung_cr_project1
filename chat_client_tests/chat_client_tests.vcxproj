@@ -77,6 +77,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="chat_client_admin_test.cc" />
     <ClCompile Include="chat_client_test.cc" />
     <ClCompile Include="chat_room_test.cc" />
   </ItemGroup>
@@ -89,6 +90,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="chat_client_admin_test_fixture.h" />
     <ClInclude Include="chat_client_test_fixture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

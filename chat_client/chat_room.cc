@@ -111,7 +111,7 @@ namespace chatclient {
             DisplayChatMessages(display_chat_message_, 
                                 current_chat_room_, 
                                 kMaxDisplayChatMessages);
-      }
+      } 
     }
   }
   
@@ -145,7 +145,7 @@ namespace chatclient {
 
   bool ChatRoom::GetChatMessagesFromServer(
       vector<ChatMessage>& chat_messages) const {
-    // Make request URL.
+    // Make request URL and body data.
     ostringstream_t http_request_url;
     http_request_url.clear();
     http_request_url << "chatmessage" << UU("?session_id=") << session_id_
@@ -156,8 +156,7 @@ namespace chatclient {
         http_requester_->MakeHttpRequestForResponse(methods::GET,
                                                     http_request_url.str());
     if (response.status_code() == status_codes::OK) {
-      value object = response.extract_json().get();
-      ::array chat_list = object.as_array();
+      ::array chat_list = response.extract_json().get().as_array();
       for (auto& i : chat_list) {
         chat_messages.emplace_back(
             i[UU("date")].as_number().to_uint64(),
@@ -171,15 +170,17 @@ namespace chatclient {
   }
 
   bool ChatRoom::StoreChatMessagesToServer(const string_t chat_message) const {
-    // Make request URL.
+    // Make request URL and body data.
     ostringstream_t http_request_url;
-    http_request_url << "chatmessage" << UU("?session_id=") << session_id_
-                     << UU("&chat_message=") << chat_message
-                     << UU("&chat_room=") << current_chat_room_;
+    http_request_url << "chatmessage";
+    value body_data;
+    body_data[UU("chat_message")] = value::string(chat_message);
+    body_data[UU("chat_room")] = value::string(current_chat_room_);
+    body_data[UU("session_id")] = value::string(session_id_);
 
     // When the HTTP request succeeds, return true otherwise return false.
     const http_response response = http_requester_->MakeHttpRequestForResponse(
-        methods::POST, http_request_url.str());
+        methods::POST, http_request_url.str(), body_data);
     if (response.status_code() == status_codes::OK) {
       return true;
     }

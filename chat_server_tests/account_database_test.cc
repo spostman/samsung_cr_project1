@@ -34,7 +34,7 @@ class AccountDatabaseTest : public ::testing::Test {
     file << "wsp" << "," << HashString(UU("abcdefgh")) << endl;
     file << "gsis" << "," << HashString(UU("!@#$%^&*")) << endl;
     file.close();
-    EXPECT_EQ(true, account_database_.Initialize(file_name));
+    true, account_database_.Initialize(file_name);
   }
 
   string_t HashLoginPassword(string_t password, string_t nonce) const {

@@ -135,15 +135,20 @@ namespace chatclient {
       return;
     }
 
-    // Make request URL
+    // Make request URL and body data.
     ostringstream_t http_request_url;
-    http_request_url << "account" << UU("?id=") << id << UU("&password=")
-                     << http_requester_->HashString(password);
+    http_request_url << "account";
+    value body_data;
+    body_data[UU("id")] = value::string(id);
+    body_data[UU("password")] = 
+        value::string(http_requester_->HashString(password));
 
-    // Make HTTP request
-    if (http_requester_->MakeHttpRequest(methods::POST, 
-                                         http_request_url.str())) {
-
+    // Make HTTP Post request.
+    const http_response response = 
+        http_requester_->MakeHttpRequest(methods::POST,
+                                         http_request_url.str(),
+                                         body_data);
+    if (response.status_code() == status_codes::OK) {
       chat_client_view_->
           DisplayMessage(UU("Success to signup."));
     }
@@ -156,23 +161,30 @@ namespace chatclient {
     const string_t password =
         chat_client_view_->GetUserInput(UU("Enter password: "));
 
-    // Make request URL
+    // Make request URL and body data.
     const string_t nonce = http_requester_->GenerateNonce();
     ostringstream_t http_request_url;
-    http_request_url << "login" << UU("?id=") << id << UU("&nonce=") << nonce
-                     << UU("&password=")
-                     << http_requester_->HashString(
-                            http_requester_->HashString(password) + nonce);
+    http_request_url << "login";
+    value body_data;
+    body_data[UU("id")] = value::string(id);
+    body_data[UU("nonce")] = value::string(nonce);
+    body_data[UU("password")] = value::string(http_requester_->HashString(
+        http_requester_->HashString(password) + nonce));
 
-    // Make HTTP request
+    // Make HTTP Post request.
     const http_response response = http_requester_->MakeHttpRequestForResponse(
-        methods::POST, http_request_url.str());
+        methods::POST, http_request_url.str(), body_data);
 
     // When the HTTP request succeeds, store session ID,
     // change client status to KAfterLogin
     if (response.status_code() == status_codes::OK) {
-      chat_client_view_->DisplayMessage(UU("Success to login."));
       value object = response.extract_json().get();
+      if(!object.has_string_field(UU("session_id"))) {
+        error("Http response does not have session_id.");
+        chat_client_view_->DisplayMessage(UU("Failed to login."));
+        return;
+      }
+      chat_client_view_->DisplayMessage(UU("Succeed to login."));
       session_id_ = object[UU("session_id")].as_string();
       user_id_ = id;
       current_client_status_ = kAfterLogin;
@@ -180,11 +192,11 @@ namespace chatclient {
   }
 
   status_code ChatClient::DisplayChatRoomList() const {
-    // Make request URL
+    // Make request URL and body data.
     ostringstream_t http_request_url;
     http_request_url << "chatroom" << UU("?session_id=") << session_id_;
 
-    // When the HTTP request succeeds, print chat room list
+    // When the HTTP request succeeds, print chat room list.
     const http_response response = http_requester_->MakeHttpRequestForResponse(
         methods::GET, http_request_url.str());
     const status_code response_code = response.status_code();
@@ -201,7 +213,6 @@ namespace chatclient {
     const string_t chat_room = 
         chat_client_view_->GetUserInput(UU("Enter chat room name: "));
 
-
     // Check whether the given chat room exists
     if (IsExistingChatRoom(chat_room)) {
       ostringstream_t buf;
@@ -212,11 +223,14 @@ namespace chatclient {
 
     // Make request URL
     ostringstream_t http_request_url;
-    http_request_url << "chatroom" << UU("?session_id=")
-                     << session_id_ << UU("&chat_room=") << chat_room;
-
+    http_request_url << "chatroom";
+    value body_data;
+    body_data[UU("chat_room")] = value::string(chat_room);
+    body_data[UU("session_id")] = value::string(session_id_);
     const status_code response_code = 
-        http_requester_->MakeHttpRequest(methods::POST, http_request_url.str());
+        http_requester_->MakeHttpRequest(methods::POST, 
+                                         http_request_url.str(), 
+                                         body_data);
     if (response_code == status_codes::OK) {
       ostringstream_t buf;
       buf << "Create chat room: " << chat_room;

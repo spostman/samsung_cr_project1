@@ -65,7 +65,7 @@ namespace chatclient {
     bool GetChatMessagesFromServer(
         std::vector<chatserver::ChatMessage>& chat_messages) const;
 
-    // Store chat message to the chat server. The chat message sends to the
+    // Store the chat message to the chat server. The chat message sends to the
     // chat server via an HTTP request.
     bool StoreChatMessagesToServer(utility::string_t chat_message) const;
 

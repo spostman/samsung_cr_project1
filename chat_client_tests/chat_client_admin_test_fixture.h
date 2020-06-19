@@ -12,8 +12,8 @@
 namespace chatclient {
 
   // Fixture class for the testing chat_client.cc
-  class ChatClientTest : public ::testing::Test {
-  protected:
+  class ChatClientAdminTest : public ::testing::Test {
+   protected:
     std::unique_ptr<chatclient::ChatClient> chat_client_;
     std::unique_ptr<chatclient::HttpRequester> http_requester_;
     std::unique_ptr<chatserver::ChatServer> chat_server_;
@@ -26,20 +26,12 @@ namespace chatclient {
           UU("chat_message_test_chat_server.txt");
       std::wofstream file(chat_message_file_name,
                           std::wofstream::out | std::ofstream::trunc);
-      file << "1583134930" << "|" << "kaist" << "|" << "1" << "|"
+      file << "1583134930" << "|" << "samsung" << "|" << "1" << "|"
            << "hello" << std::endl;
-      file << "1583134935" << "|" << "wsp" << "|" << "1" << "|"
-           << "hi" << std::endl;
-      file << "1583134940" << "|" << "gsis" << "|" << "1" << "|"
-           << "nice to meet you" << std::endl;
-      file << "1583134955" << "|" << "kaist" << "|" << "1" << "|"
+      file << "1583134955" << "|" << "samsung" << "|" << "1" << "|"
            << "hello!!! hihi" << std::endl;
-      file << "1583134945" << "|" << "kaist" << "|" << "2" << "|"
-           << "hello~!" << std::endl;
-      file << "1583134950" << "|" << "wsp" << "|" << "3" << "|"
+      file << "1583134950" << "|" << "galaxy" << "|" << "2" << "|"
            << "hello :)" << std::endl;
-      file << "1583134955" << "|" << "gsis" << "|" << "abc" << "|"
-           << "hello!!!" << std::endl;
       file.close();
 
       // Create chat room file for ChatDatabase class
@@ -49,8 +41,6 @@ namespace chatclient {
                 std::wofstream::out | std::ofstream::trunc);
       file << "1" << std::endl;
       file << "2" << std::endl;
-      file << "3" << std::endl;
-      file << "abc" << std::endl;
       file.close();
 
       chat_database_ = std::make_unique<chatserver::ChatDatabase>();
@@ -61,12 +51,10 @@ namespace chatclient {
       const utility::string_t account_file_name =
           UU("accounts_test_chat_server.txt");
       file.open(account_file_name, std::wofstream::out | std::ofstream::trunc);
-      file << "kaist" << ","
+      file << "samsung" << ","
            << http_requester_->HashString(UU("12345678")) << std::endl;
-      file << "wsp" << ","
+      file << "galaxy" << ","
            << http_requester_->HashString(UU("abcdefgh")) << std::endl;
-      file << "gsis" << ","
-           << http_requester_->HashString(UU("!@#$%^&*")) << std::endl;
       file.close();
 
       account_database_ = std::make_unique<chatserver::AccountDatabase>();
@@ -79,6 +67,7 @@ namespace chatclient {
           std::make_unique<chatserver::ChatServer>(chat_database_.get(), 
                                                    account_database_.get(), 
                                                    session_manager_.get());
+
       chat_server_->Initialize(server_address);
       concurrency::task_status::completed, chat_server_->OpenServer().wait();
     }
@@ -94,22 +83,6 @@ namespace chatclient {
 
     std::unique_ptr<chatclient::ChatClient> GetChatClient() const {
       return std::make_unique<chatclient::ChatClient>(server_address);
-    }
-
-    utility::string_t GetSessionID() const {
-      return chat_client_->session_id_;
-    }
-
-    utility::string_t GetUserID() const {
-      return chat_client_->user_id_;
-    }
-
-    utility::string_t GetCurrentChatRoom() const {
-      return chat_client_->current_chat_room_;
-    }
-
-    ChatClient::ClientStatus GetClientCurrentStatus() const {
-      return chat_client_->current_client_status_;
     }
 
     // Runs chat client for getting C++ standard output of chat client.
@@ -140,7 +113,7 @@ namespace chatclient {
       return standard_output;
     }
 
-  private:
+   private:
     std::unique_ptr<chatserver::ChatDatabase> chat_database_;
     std::unique_ptr<chatserver::AccountDatabase> account_database_;
     std::unique_ptr<chatserver::SessionManager> session_manager_;

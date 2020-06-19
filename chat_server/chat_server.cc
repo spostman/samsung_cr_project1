@@ -80,7 +80,7 @@ namespace chatserver {
       return;
     }
 
-    if (!IsValidSession(url_queries)) {
+    if (!CheckAndUpdateValidSession(url_queries)) {
       message.reply(status_codes::Forbidden,
                     UU("Not a valid session ID"));
       return;
@@ -159,27 +159,20 @@ namespace chatserver {
     vector<string_t> url_paths = uri::split_path(
         uri::decode(message.relative_uri().path()));
 
-    // Query string of HTTP request URL.
-    // Format: map<string_t, string_t> = <query name, query value>
-    map<string_t, string_t> url_queries = uri::split_query(
-        uri::decode(message.relative_uri().query()));
-
-    if (url_paths.empty()) {
-      message.reply(status_codes::NotFound);
-      return;
-    }
+    // Body data of the post request. Use JSON format to read.
+    value body_data = message.extract_json().get();
 
     // API service without session ID.
     const string_t first_request_url_path = url_paths[0];
     if (first_request_url_path == UU("account")) {
-      ProcessPostSignUpRequest(message, url_queries);
+      ProcessPostSignUpRequest(message, body_data);
       return;
     } else if (first_request_url_path == UU("login")) {
-      ProcessPostLoginRequest(message, url_queries);
+      ProcessPostLoginRequest(message, body_data);
       return;
     }
 
-    if (!IsValidSession(url_queries)) {
+    if (!CheckAndUpdateValidSession(body_data)) {
       message.reply(status_codes::Forbidden,
                     UU("Not a valid session ID"));
       return;
@@ -188,10 +181,10 @@ namespace chatserver {
     // Function call according to URL path with session ID.
     const string_t second_request_url_path = url_paths[0];
     if (second_request_url_path == UU("chatmessage")) {
-      ProcessPostInputChatMessageRequest(message, url_queries);
+      ProcessPostInputChatMessageRequest(message, body_data);
       return;
     } else if (second_request_url_path == UU("chatroom")) {
-      ProcessCreateChatRoomRequest(message, url_queries);
+      ProcessCreateChatRoomRequest(message, body_data);
       return;
     }
 
@@ -202,18 +195,18 @@ namespace chatserver {
 
   void ChatServer::ProcessPostSignUpRequest(
       const http_request& message,
-      const map<string_t, string_t>& url_queries) {
-    const auto id_it = url_queries.find(UU("id"));
-    const auto password_it = url_queries.find(UU("password"));
-    if (id_it == url_queries.end() ||
-      password_it == url_queries.end()) {
+      const value& body_data) {
+    const string_t kJsonKeyId = UU("id");
+    const string_t kJsonKeyPassword = UU("password");
+    if (!body_data.has_string_field(kJsonKeyId) || 
+        !body_data.has_string_field(kJsonKeyPassword)) {
       message.reply(status_codes::BadRequest,
-          UU("Account information absence"));
+                    UU("Account information absence"));
       return;
     }
-    const string_t id = id_it->second;
-    const string_t password = password_it->second;
 
+    const string_t id = body_data.at(kJsonKeyId).as_string();
+    const string_t password = body_data.at(kJsonKeyPassword).as_string();
     const int signup_result = 
         account_database_->SignUp(id, password);
     if (signup_result == AccountDatabase::kAuthSuccess) {
@@ -240,22 +233,21 @@ namespace chatserver {
 
   void ChatServer::ProcessPostLoginRequest(
       const http_request& message, 
-      const map<string_t, string_t>& url_queries) {
-    const auto id_it = url_queries.find(UU("id"));
-    const auto password_it = url_queries.find(UU("password"));
-    const auto nonce_it = url_queries.find(UU("nonce"));
-    if (id_it == url_queries.end() || 
-        password_it == url_queries.end() ||
-        nonce_it == url_queries.end()) {
+      const value& body_data) {
+    const string_t kJsonKeyId = UU("id");
+    const string_t kJsonKeyPassword = UU("password");
+    const string_t kJsonKeyNonce = UU("nonce");
+    if (!body_data.has_string_field(kJsonKeyId) ||
+        !body_data.has_string_field(kJsonKeyPassword) ||
+        !body_data.has_string_field(kJsonKeyNonce)) {
       message.reply(status_codes::BadRequest,
                     UU("Account information absence"));
       return;
     }
-    
-    const string_t id = id_it->second;
-    const string_t password = password_it->second;
-    const string_t nonce = nonce_it->second;
 
+    const string_t id = body_data.at(kJsonKeyId).as_string();
+    const string_t password = body_data.at(kJsonKeyPassword).as_string();
+    const string_t nonce = body_data.at(kJsonKeyNonce).as_string();
     const int login_result = 
         account_database_->Login(id, password, nonce);
     if (login_result == AccountDatabase::kAuthSuccess) {
@@ -276,15 +268,22 @@ namespace chatserver {
 
   void ChatServer::ProcessPostInputChatMessageRequest(
       const http_request& message, 
-      const map<string_t, string_t>& url_queries) {
-    if (url_queries.find(UU("chat_message")) == url_queries.end() ||
-      url_queries.find(UU("chat_room")) == url_queries.end()) {
+      const value& body_data) {
+    const string_t kJsonKeyChatMessage = UU("chat_message");
+    const string_t kJsonKeyChatRoom = UU("chat_room");
+    const string_t kJsonKeySessionId = UU("session_id");
+    if (!body_data.has_string_field(kJsonKeyChatMessage) ||
+        !body_data.has_string_field(kJsonKeyChatRoom) || 
+        !body_data.has_string_field(kJsonKeySessionId)) {
       message.reply(status_codes::BadRequest,
-                    UU("Chat information absence"));
+                    UU("Account information absence"));
       return;
     }
 
-    const string_t session_id = url_queries.find(UU("session_id"))->second;
+    const string_t chat_message_string = 
+        body_data.at(kJsonKeyChatMessage).as_string();
+    const string_t chat_room = body_data.at(kJsonKeyChatRoom).as_string();
+    const string_t session_id = body_data.at(kJsonKeySessionId).as_string();
     ChatMessage chat_message;
     if (!session_manager_->GetUserIDFromSessionId(session_id, 
                                                   &chat_message.user_id)) {
@@ -293,30 +292,32 @@ namespace chatserver {
       return;
     }
 
-    chat_message.chat_message = url_queries.find(UU("chat_message"))->second;
-    chat_message.chat_room = url_queries.find(UU("chat_room"))->second;
+    chat_message.chat_message = chat_message_string;
+    chat_message.chat_room = chat_room;
     chat_message.date = chrono::system_clock::to_time_t(
         chrono::system_clock::now());
     if (chat_database_->StoreChatMessage(chat_message)) {
       message.reply(status_codes::OK);
       return;
     } else {
-      message.reply(status_codes::InternalError, 
-                    UU("Fail to store chat message"));
+      message.reply(status_codes::BadRequest, 
+                    UU("Prohibited char in the message, room, or date"));
       return;
     }
   }
 
   void ChatServer::ProcessCreateChatRoomRequest(
       const http_request& message,
-      const map<string_t, string_t>& url_queries) {
-    if (url_queries.find(UU("chat_room")) == url_queries.end()) {
-      message.reply(status_codes::BadRequest, UU("No chat room parameter"));
+      const value& body_data) {
+    const string_t kJsonKeyChatRoom = UU("chat_room");
+    if (!body_data.has_string_field(kJsonKeyChatRoom)) {
+      message.reply(status_codes::BadRequest,
+                    UU("Account information absence"));
       return;
     }
 
-    if (chat_database_->CreateChatRoom(
-        url_queries.find(UU("chat_room"))->second)) {
+    const string_t chat_room = body_data.at(kJsonKeyChatRoom).as_string();
+    if (chat_database_->CreateChatRoom(chat_room)) {
       message.reply(status_codes::OK);
     } else {
       message.reply(status_codes::BadRequest);
@@ -334,7 +335,7 @@ namespace chatserver {
     map<string_t, string_t> url_queries = uri::split_query(
         uri::decode(message.relative_uri().query()));
 
-    if (!IsValidSession(url_queries)) {
+    if (!CheckAndUpdateValidSession(url_queries)) {
       message.reply(status_codes::Forbidden,
                     UU("Not a valid session ID"));
       return;
@@ -372,7 +373,7 @@ namespace chatserver {
     message.reply(status_codes::NotFound);
   }
 
-  bool ChatServer::IsValidSession(
+  bool ChatServer::CheckAndUpdateValidSession(
       const map<string_t, string_t>& url_queries) {
     const auto session_id_it = url_queries.find(UU("session_id"));
     if (session_id_it == url_queries.end() ||
@@ -382,6 +383,25 @@ namespace chatserver {
       // If there is a request through a valid session id,
       // renew the session alive time.
       if (!session_manager_->RenewLastActivityTime(session_id_it->second)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool ChatServer::CheckAndUpdateValidSession(const value& body_data) {
+    const string_t kJsonKeySessionId = UU("session_id");
+    if (!body_data.has_string_field(kJsonKeySessionId)) {
+      return false;
+    }
+
+    const string_t session_id = body_data.at(kJsonKeySessionId).as_string();
+    if (!session_manager_->IsExistSessionId(session_id)) {
+      return false;
+    } else {
+      // If there is a request through a valid session id,
+      // renew the session alive time.
+      if (!session_manager_->RenewLastActivityTime(session_id)) {
         return false;
       }
     }

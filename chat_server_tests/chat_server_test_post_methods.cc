@@ -16,26 +16,67 @@ using ::concurrency::task_status;
 using ::web::http::client::http_client;
 using ::web::http::http_response;
 using ::web::json::value;
+using ::web::uri;
 
 TEST_F(ChatServerTest, Post_CreateAccount_Success) {
   ostringstream_t buf;
-  // Test for success to create an account
-  buf << "account" << UU("?id=")
-      << "wsplab" << UU("&password=") << HashString(UU("bestkaistlab"));
+  buf << UU("account");
+  value body_data;
+  body_data[UU("id")] = value::string(UU("wsplab"));
+  body_data[UU("password")] = value::string(HashString(UU("bestkaistlab")));
   http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
+      http::methods::POST, uri::encode_uri(buf.str()), body_data).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::OK);
+}
+
+TEST_F(ChatServerTest, Post_CreateAccount_Success_whitespace) {
+  ostringstream_t buf;
+  buf << UU("account");
+  value body_data;
+  body_data[UU("id")] = value::string(UU("ws p    l ab"));
+  body_data[UU("password")] = value::string(HashString(UU("bestkaistlab")));
+  http_response response = http_client_->request(
+      http::methods::POST, uri::encode_uri(buf.str()), body_data).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::OK);
+}
+
+TEST_F(ChatServerTest, Post_CreateAccount_Success_Special_Characters) {
+  ostringstream_t buf;
+  buf << UU("account");
+  value body_data;
+  body_data[UU("id")] = value::string(UU("ws!@$!@%=-#$#$^"));
+  body_data[UU("password")] = value::string(HashString(UU("bestkaistlab")));
+  http_response response = http_client_->request(
+      http::methods::POST, uri::encode_uri(buf.str()), body_data).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::OK);
+
+  body_data[UU("id")] = value::string(UU("./;'[]123"));
+  body_data[UU("password")] = value::string(HashString(UU("bestkaistlab")));
+  response = http_client_->request(
+      http::methods::POST, uri::encode_uri(buf.str()), body_data).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::OK);
+}
+
+TEST_F(ChatServerTest, Post_CreateAccount_Success_Numbers) {
+  ostringstream_t buf;
+  buf << UU("account");
+  value body_data;
+  body_data[UU("id")] = value::string(UU("34509785468120"));
+  body_data[UU("password")] = value::string(HashString(UU("bestkaistlab")));
+  http_response response = http_client_->request(
+    http::methods::POST, uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::OK);
 }
 
 TEST_F(ChatServerTest, Post_CreateAccount_Fail_DuplicateId) {
+  // Test for duplicate ID.
   ostringstream_t buf;
-  // Test for duplicate ID
-  buf.str(UU(""));
-  buf.clear();
-  buf << "account" << UU("?id=") << "kaist"
-      << UU("&password=") << HashString(UU("12345678"));
+  buf << UU("account");
+  value body_data;
+  body_data[UU("id")] = value::string(UU("kaist"));
+  body_data[UU("password")] = value::string(HashString(UU("12345678")));
   http_response response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+      uri::encode_uri(buf.str()), body_data).get();
   string_t body =
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
@@ -43,32 +84,38 @@ TEST_F(ChatServerTest, Post_CreateAccount_Fail_DuplicateId) {
 }
 
 TEST_F(ChatServerTest, Post_CreateAccount_Fail_ProhibitedCharInId) {
+  // Test for prohibited char in ID.
   ostringstream_t buf;
-  // Test for prohibited char in ID
-  buf.str(UU(""));
-  buf.clear();
-  AccountDatabase account_database;
-  buf << "account"
-      << UU("?id=") << UU("kaist") + kParsingDelimeterAccount
-      << UU("&password=") << HashString(UU("12345678"));
+  buf << UU("account");
+  value body_data;
+  body_data[UU("id")] = value::string(UU("yonsei") + kParsingDelimeterAccount);
+  body_data[UU("password")] = value::string(HashString(UU("12345678")));
   http_response response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+      uri::encode_uri(buf.str()), body_data).get();
   string_t body = 
       response.content_ready().get().extract_utf16string(true).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
+  EXPECT_EQ(body, UU("Prohibited character in ID"));
+
+  body_data[UU("id")] = value::string(UU("yonsei") + kParsingDelimeterChatDb);
+  body_data[UU("password")] = value::string(HashString(UU("12345678")));
+  response = http_client_->request(http::methods::POST,
+      uri::encode_uri(buf.str()), body_data).get();
+  body = response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
   EXPECT_EQ(body, UU("Prohibited character in ID"));
 }
 
 TEST_F(ChatServerTest, Post_CreateAccount_Fail_ProhibitedCharInPassword) {
+  // Test for prohibited char in password.
   ostringstream_t buf;
-  // Test for prohibited char in password
-  buf.str(UU(""));
-  buf.clear();
-  buf << "account" << UU("?id=") << UU("kaist")
-      << UU("&password=")
-      << UU("12345678" + kParsingDelimeterAccount);
+  buf << UU("account");
+  value body_data;
+  body_data[UU("id")] = value::string(UU("yonsei"));
+  body_data[UU("password")] = value::string(HashString(UU("12345678")) + 
+                                            kParsingDelimeterAccount);
   http_response response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+      uri::encode_uri(buf.str()), body_data).get();
   string_t body = 
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
@@ -76,11 +123,9 @@ TEST_F(ChatServerTest, Post_CreateAccount_Fail_ProhibitedCharInPassword) {
 }
 
 TEST_F(ChatServerTest, Post_CreateAccount_Fail_NoHttpParameters) {
+  // Test for empty parameters.
   ostringstream_t buf;
-  // Test for empty parameters
-  buf.str(UU(""));
-  buf.clear();
-  buf << "account";
+  buf << UU("account");
   http_response response = http_client_->request(http::methods::POST,
       uri::encode_uri(buf.str())).get();
   string_t body = 
@@ -90,13 +135,13 @@ TEST_F(ChatServerTest, Post_CreateAccount_Fail_NoHttpParameters) {
 }
 
 TEST_F(ChatServerTest, Post_CreateAccount_Fail_NoPassword) {
+  // Test for no password.
   ostringstream_t buf;
-  // Test for incomplete password parameter
-  buf.str(UU(""));
-  buf.clear();
-  buf << "account" << UU("?id=") << "wsplab";
+  buf << UU("account");
+  value body_data;
+  body_data[UU("id")] = value::string(UU("kaist"));
   http_response response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+      uri::encode_uri(buf.str()), body_data).get();
   string_t body = 
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
@@ -104,14 +149,13 @@ TEST_F(ChatServerTest, Post_CreateAccount_Fail_NoPassword) {
 }
 
 TEST_F(ChatServerTest, Post_CreateAccount_Fail_NoId) {
+  // Test for no id.
   ostringstream_t buf;
-  // Test for incomplete id parameter
-  buf.str(UU(""));
-  buf.clear();
-  buf << "account" << UU("?password=") << HashString(UU("12345678"));
-  http_response response = 
-      http_client_->request(http::methods::POST,
-                            uri::encode_uri(buf.str())).get();
+  buf << UU("account");
+  value body_data;
+  body_data[UU("password")] = value::string(UU("12345678"));
+  http_response response = http_client_->request(http::methods::POST,
+      uri::encode_uri(buf.str()), body_data).get();
   string_t body =
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
@@ -119,45 +163,81 @@ TEST_F(ChatServerTest, Post_CreateAccount_Fail_NoId) {
 }
 
 TEST_F(ChatServerTest, Post_Login_Success) {
+  // Test for success to login.
   ostringstream_t buf;
-  // Test for success to login
+  buf << UU("login");
+  value body_data;
   string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
+  body_data[UU("id")] = value::string(UU("kaist"));
+  body_data[UU("nonce")] = value::string(nonce);
+  body_data[UU("password")] = 
+      value::string(HashLoginPassword(UU("12345678"), nonce));
   http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
+      http::methods::POST, uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::OK);
 
-  buf.str(UU(""));
-  buf.clear();
   nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "wsp" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("abcdefgh"), nonce);
+  body_data[UU("id")] = value::string(UU("wsp"));
+  body_data[UU("nonce")] = value::string(nonce);
+  body_data[UU("password")] =
+      value::string(HashLoginPassword(UU("abcdefgh"), nonce));
   response = http_client_->request(http::methods::POST,
-                                   uri::encode_uri(buf.str())).get();
+                                   uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::OK);
 
-  buf.str(UU(""));
-  buf.clear();
   nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "gsis" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("!@#$%^&*"), nonce);
+  body_data[UU("id")] = value::string(UU("gsis"));
+  body_data[UU("nonce")] = value::string(nonce);
+  body_data[UU("password")] =
+      value::string(HashLoginPassword(UU("!@#$%^&*"), nonce));
   response = http_client_->request(http::methods::POST,
-                                   uri::encode_uri(buf.str())).get();
+                                   uri::encode_uri(buf.str()), body_data).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::OK);
+}
+
+TEST_F(ChatServerTest, Post_Login_Success_Whitespace) {
+  // Test for success to login.
+  ostringstream_t buf;
+  buf << UU("login");
+  value body_data;
+  string_t nonce = GenerateNonce();
+  body_data[UU("id")] = value::string(UU("lab  w sp"));
+  body_data[UU("nonce")] = value::string(nonce);
+  body_data[UU("password")] =
+      value::string(HashLoginPassword(UU("12345678"), nonce));
+  http_response response = http_client_->request(
+      http::methods::POST, uri::encode_uri(buf.str()), body_data).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::OK);
+}
+
+TEST_F(ChatServerTest, Post_Login_Success_SpecialChar) {
+  // Test for success to login.
+  ostringstream_t buf;
+  buf << UU("login");
+  value body_data;
+  string_t nonce = GenerateNonce();
+  body_data[UU("id")] = value::string(UU("lab !@.#$% hi"));
+  body_data[UU("nonce")] = value::string(nonce);
+  body_data[UU("password")] =
+      value::string(HashLoginPassword(UU("!@#$%^&*"), nonce));
+  http_response response = http_client_->request(
+      http::methods::POST, uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::OK);
 }
 
 TEST_F(ChatServerTest, Post_Login_Fail_IdNotExist) {
+  // Test for no id.
   ostringstream_t buf;
-  // Test for non-existent ID
-  buf.str(UU(""));
-  buf.clear();
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "yonsei" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
+  buf << UU("login");
+  value body_data;
+  string_t nonce = GenerateNonce();
+  body_data[UU("id")] = value::string(UU("yonsei"));
+  body_data[UU("nonce")] = value::string(nonce);
+  body_data[UU("password")] =
+      value::string(HashLoginPassword(UU("12345678"), nonce));
   http_response response =
       http_client_->request(http::methods::POST,
-                            uri::encode_uri(buf.str())).get();
+                            uri::encode_uri(buf.str()), body_data).get();
   string_t body =
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
@@ -165,55 +245,39 @@ TEST_F(ChatServerTest, Post_Login_Fail_IdNotExist) {
 }
 
 TEST_F(ChatServerTest, Post_Login_Fail_PasswordError) {
+  // Test for password error.
   ostringstream_t buf;
-  // Test for password error
-  buf.str(UU(""));
-  buf.clear();
+  buf << UU("login");
+  value body_data;
   string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("1234842122"), nonce);
+  body_data[UU("id")] = value::string(UU("kaist"));
+  body_data[UU("nonce")] = value::string(nonce);
+  body_data[UU("password")] =
+      value::string(HashLoginPassword(UU("12345678489ffwe"), nonce));
   http_response response = 
       http_client_->request(http::methods::POST,
-                            uri::encode_uri(buf.str())).get();
+                            uri::encode_uri(buf.str()), body_data).get();
   string_t body = 
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
   EXPECT_EQ(body, UU("Password error"));
 
-  buf.str(UU(""));
-  buf.clear();
   nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "wsp" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("abcewjifoew"), nonce);
+  body_data[UU("id")] = value::string(UU("wsp"));
+  body_data[UU("nonce")] = value::string(nonce);
+  body_data[UU("password")] =
+      value::string(HashLoginPassword(UU("abewfwefsde"), nonce));
   response = http_client_->request(http::methods::POST,
-                                   uri::encode_uri(buf.str())).get();
+                                   uri::encode_uri(buf.str()), body_data).get();
   body = response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
   EXPECT_EQ(body, UU("Password error"));
 }
 
 TEST_F(ChatServerTest, Post_Login_Fail_NoParameters) {
+  // Test for empty parameters.
   ostringstream_t buf;
-  // Test for empty parameters
-  buf.str(UU(""));
-  buf.clear();
-  buf << "login";
-  http_response response = 
-      http_client_->request(http::methods::POST,
-                            uri::encode_uri(buf.str())).get();
-  string_t body = 
-      response.content_ready().get().extract_utf16string(true).get();
-  EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
-  EXPECT_EQ(body, UU("Account information absence"));
-}
-
-TEST_F(ChatServerTest, Post_Login_Fail_NoPassword) {
-  ostringstream_t buf;
-  // Test for incomplete password parameter
-  buf.str(UU(""));
-  buf.clear();
-  string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "wsplab" << UU("&nonce=") << nonce;
+  buf << UU("login");
   http_response response = 
       http_client_->request(http::methods::POST,
                             uri::encode_uri(buf.str())).get();
@@ -224,16 +288,52 @@ TEST_F(ChatServerTest, Post_Login_Fail_NoPassword) {
 }
 
 TEST_F(ChatServerTest, Post_Login_Fail_NoId) {
+  // Test for no id.
   ostringstream_t buf;
-  // Test for incomplete id parameter
-  buf.str(UU(""));
-  buf.clear();
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?password=") << HashLoginPassword(UU("bestbest"), nonce)
-      << UU("&nonce=") << nonce;
+  buf << UU("login");
+  value body_data;
+  string_t nonce = GenerateNonce();
+  body_data[UU("password")] = 
+      value::string(HashLoginPassword(UU("12345678"), nonce));
+  body_data[UU("nonce")] = value::string(nonce);
+  http_response response =
+      http_client_->request(http::methods::POST,
+                            uri::encode_uri(buf.str()), body_data).get();
+  string_t body =
+      response.content_ready().get().extract_utf16string(true).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
+  EXPECT_EQ(body, UU("Account information absence"));
+}
+
+TEST_F(ChatServerTest, Post_Login_Fail_NoPassword) {
+  // Test for no password.
+  ostringstream_t buf;
+  buf << UU("login");
+  value body_data;
+  string_t nonce = GenerateNonce();
+  body_data[UU("id")] = value::string(UU("kaist"));
+  body_data[UU("nonce")] = value::string(nonce);
   http_response response = 
-      http_client_->request(http::methods::POST, 
-                            uri::encode_uri(buf.str())).get();
+      http_client_->request(http::methods::POST,
+                            uri::encode_uri(buf.str()), body_data).get();
+  string_t body = 
+      response.content_ready().get().extract_utf16string(true).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
+  EXPECT_EQ(body, UU("Account information absence"));
+}
+
+TEST_F(ChatServerTest, Post_Login_Fail_NoNonce) {
+  // Test for no nonce.
+  ostringstream_t buf;
+  buf << UU("login");
+  value body_data;
+  string_t nonce = GenerateNonce();
+  body_data[UU("id")] = value::string(UU("kaist"));
+  body_data[UU("password")] =
+      value::string(HashLoginPassword(UU("12345678"), nonce));
+  http_response response =
+      http_client_->request(http::methods::POST,
+                            uri::encode_uri(buf.str()), body_data).get();
   string_t body =
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
@@ -241,16 +341,18 @@ TEST_F(ChatServerTest, Post_Login_Fail_NoId) {
 }
 
 TEST_F(ChatServerTest, Post_Login_Fail_NotSameNonce) {
+  // Test for not using the same nonce.
   ostringstream_t buf;
-  // Test for not using the same nonce
-  buf.str(UU(""));
-  buf.clear();
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), GenerateNonce());
+  buf << UU("login");
+  value body_data;
+  string_t nonce = GenerateNonce();
+  body_data[UU("id")] = value::string(UU("kaist"));
+  body_data[UU("password")] =
+    value::string(HashLoginPassword(UU("12345678"), nonce));
+  body_data[UU("nonce")] = value::string(GenerateNonce());
   http_response response =
       http_client_->request(http::methods::POST,
-          uri::encode_uri(buf.str())).get();
+          uri::encode_uri(buf.str()), body_data).get();
   string_t body =
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
@@ -258,106 +360,99 @@ TEST_F(ChatServerTest, Post_Login_Fail_NotSameNonce) {
 }
 
 TEST_F(ChatServerTest, Post_InputChatMessage_Success) {
+  string_t session_id = PerformSuccessfulLogin();
+  // Test for success to input a chat message.
   ostringstream_t buf;
-  // Login process for obtaining session ID
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
-  http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
-  EXPECT_EQ(response.status_code(), http::status_codes::OK);
-  value object = response.extract_json().get();
-  string_t session_id_ = object[UU("session_id")].as_string();
-
-  // Test for success to input a chat message
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatmessage" << UU("?chat_message=") << "good day~!"
-      << UU("&chat_room=") << "1" << UU("&session_id=") << session_id_;
-  response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+  buf << UU("chatmessage");
+  value body_data;
+  body_data[UU("chat_message")] = value::string(UU("good day~!"));
+  body_data[UU("chat_room")] = value::string(UU("1"));
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response = http_client_->request(http::methods::POST,
+      uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::OK);
 
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatmessage" << UU("?chat_message=") << "good day="
-      << UU("&chat_room=") << "2" << UU("&session_id=") << session_id_;
+  body_data[UU("chat_message")] = value::string(UU("good day="));
+  body_data[UU("chat_room")] = value::string(UU("2"));
+  body_data[UU("session_id")] = value::string(session_id);
   response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+      uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::OK);
 
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatmessage" << UU("?chat_message=") << "good day?"
-      << UU("&chat_room=") << "3" << UU("&session_id=") << session_id_;
+  body_data[UU("chat_message")] = value::string(UU("good da?"));
+  body_data[UU("chat_room")] = value::string(UU("3"));
+  body_data[UU("session_id")] = value::string(session_id);
   response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+      uri::encode_uri(buf.str()), body_data).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::OK);
+}
+
+TEST_F(ChatServerTest, Post_InputChatMessage_Success_Whitespace) {
+  string_t session_id = PerformSuccessfulLogin();
+  // Test for success to input a chat message with whitespace.
+  ostringstream_t buf;
+  buf << UU("chatmessage");
+  value body_data;
+  body_data[UU("chat_message")] = value::string(UU("good day~!  hihi    "));
+  body_data[UU("chat_room")] = value::string(UU("1"));
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response = http_client_->request(http::methods::POST,
+      uri::encode_uri(buf.str()), body_data).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::OK);
+}
+
+TEST_F(ChatServerTest, Post_InputChatMessage_Success_SpecialChar) {
+  string_t session_id = PerformSuccessfulLogin();
+  // Test for success to input a chat message with special char.
+  ostringstream_t buf;
+  buf << UU("chatmessage");
+  value body_data;
+  body_data[UU("chat_message")] = value::string(UU("!@#%^&*)!@#./;'[]{}\!"));
+  body_data[UU("chat_room")] = value::string(UU("1"));
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response = http_client_->request(http::methods::POST,
+      uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::OK);
 }
 
 TEST_F(ChatServerTest, Post_InputChatMessage_Fail_NoChatMessage) {
+  string_t session_id = PerformSuccessfulLogin();
+  //Test for missing chat message.
   ostringstream_t buf;
-  // Login process for obtaining session ID
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
-  http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
-  EXPECT_EQ(response.status_code(), http::status_codes::OK);
-  value object = response.extract_json().get();
-  string_t session_id_ = object[UU("session_id")].as_string();
-
-  //Test for missing chat message parameter
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatmessage" << UU("?chat_room=") << "1"
-      << UU("&session_id=") << session_id_;
-  response = http_client_->request(http::methods::POST,
-                                   uri::encode_uri(buf.str())).get();
+  buf << UU("chatmessage");
+  value body_data;
+  body_data[UU("chat_room")] = value::string(UU("1"));
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response = 
+      http_client_->request(http::methods::POST,
+                            uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
 }
 
 TEST_F(ChatServerTest, Post_InputChatMessage_Fail_NoChatRoom) {
+  string_t session_id = PerformSuccessfulLogin();
+  //Test for missing chat room.
   ostringstream_t buf;
-  // Login process for obtaining session ID
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
-  http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
-  EXPECT_EQ(response.status_code(), http::status_codes::OK);
-  value object = response.extract_json().get();
-  string_t session_id_ = object[UU("session_id")].as_string();
-
-  //Test for missing chat room parameter
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatmessage" << UU("?chat_message=") << "good day~!"
-      << UU("&session_id=") << session_id_;
-  response = http_client_->request(http::methods::POST,
-                                   uri::encode_uri(buf.str())).get();
+  buf << UU("chatmessage");
+  value body_data;
+  body_data[UU("chat_message")] = value::string(UU("good day~!"));
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response = 
+      http_client_->request(http::methods::POST,
+                            uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
 }
 
 TEST_F(ChatServerTest, Post_InputChatMessage_Fail_NoSessionId) {
+  string_t session_id = PerformSuccessfulLogin();
+  // Test for missing session id.
   ostringstream_t buf;
-  // Login process for obtaining session ID
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
-  http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
-  EXPECT_EQ(response.status_code(), http::status_codes::OK);
-  value object = response.extract_json().get();
-  string_t session_id_ = object[UU("session_id")].as_string();
-
-  //Test for missing session id
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatmessage" << UU("?chat_message=") << "good day?"
-      << UU("&chat_room=") << "3";
-  response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+  buf << UU("chatmessage");
+  value body_data;
+  body_data[UU("chat_message")] = value::string(UU("good day~!"));
+  body_data[UU("chat_room")] = value::string(UU("1"));
+  http_response response = http_client_->request(http::methods::POST,
+      uri::encode_uri(buf.str()), body_data).get();
   string_t body =
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::Forbidden);
@@ -365,114 +460,134 @@ TEST_F(ChatServerTest, Post_InputChatMessage_Fail_NoSessionId) {
 }
 
 TEST_F(ChatServerTest, Post_InputChatMessage_Fail_InvalidSessionId) {
+  string_t session_id = PerformSuccessfulLogin();
+  // Test for invalid session id.
   ostringstream_t buf;
-  // Login process for obtaining session ID
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
-  http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
-  EXPECT_EQ(response.status_code(), http::status_codes::OK);
-  value object = response.extract_json().get();
-  string_t session_id_ = object[UU("session_id")].as_string();
-
-  //Test for invalid session id
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatmessage" << UU("?chat_message=") << "good day?"
-      << UU("&chat_room=") << "3" << UU("&session_id=") << "invalid id";
-  response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+  buf << UU("chatmessage");
+  value body_data;
+  body_data[UU("chat_message")] = value::string(UU("good day~!"));
+  body_data[UU("chat_room")] = value::string(UU("1"));
+  body_data[UU("session_id")] = value::string(UU("invalid session id"));
+  http_response response = http_client_->request(http::methods::POST,
+      uri::encode_uri(buf.str()), body_data).get();
   string_t body = 
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::Forbidden);
   EXPECT_EQ(body, UU("Not a valid session ID"));
 }
 
-TEST_F(ChatServerTest, Post_CreateChatRoom_Success) {
+TEST_F(ChatServerTest, Post_InputChatMessage_Fail_Prohibited_Char) {
+  string_t session_id = PerformSuccessfulLogin();
+  // Test for chat message with prohibited char.
   ostringstream_t buf;
-  // Login process for obtaining session ID
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
-  http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
-  EXPECT_EQ(response.status_code(), http::status_codes::OK);
-  value object = response.extract_json().get();
-  string_t session_id_ = object[UU("session_id")].as_string();
+  buf << UU("chatmessage");
+  value body_data;
+  body_data[UU("chat_message")] = value::string(UU("||good day~!||"));
+  body_data[UU("chat_room")] = value::string(UU("1"));
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response = http_client_->request(http::methods::POST,
+      uri::encode_uri(buf.str()), body_data).get();
+  string_t body =
+      response.content_ready().get().extract_utf16string(true).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
+  EXPECT_EQ(body, UU("Prohibited char in the message, room, or date"));
+}
 
+TEST_F(ChatServerTest, Post_CreateChatRoom_Success) {
+  string_t session_id = PerformSuccessfulLogin();
   // Test for success to make a chat room
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatroom" << UU("?chat_room=") << "success"
-      << UU("&session_id=") << session_id_;
-  response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+  ostringstream_t buf;
+  buf << UU("chatroom");
+  value body_data;
+  body_data[UU("chat_room")] = value::string(UU("12345"));
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response = 
+      http_client_->request(http::methods::POST,
+                            uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::OK);
 }
 
-TEST_F(ChatServerTest, Post_CreateChatRoom_Fail_Duplicate_ChatRoom) {
+TEST_F(ChatServerTest, Post_CreateChatRoom_Success_Whitespace) {
+  string_t session_id = PerformSuccessfulLogin();
+  // Test for success to make a chat room with whitespace
   ostringstream_t buf;
-  // Login process for obtaining session ID
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
-  http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
+  buf << UU("chatroom");
+  value body_data;
+  body_data[UU("chat_room")] = value::string(UU("12 3   45"));
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response =
+      http_client_->request(http::methods::POST,
+          uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::OK);
-  value object = response.extract_json().get();
-  string_t session_id_ = object[UU("session_id")].as_string();
+}
 
+TEST_F(ChatServerTest, Post_CreateChatRoom_Success_SpecialChar) {
+  string_t session_id = PerformSuccessfulLogin();
+  // Test for success to make a chat room
+  ostringstream_t buf;
+  buf << UU("chatroom");
+  value body_data;
+  body_data[UU("chat_room")] = value::string(UU("!@#$%^&*()_+"));
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response =
+      http_client_->request(http::methods::POST,
+          uri::encode_uri(buf.str()), body_data).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::OK);
+}
+
+TEST_F(ChatServerTest, Post_CreateChatRoom_Fail_ProhibitedChar) {
+  string_t session_id = PerformSuccessfulLogin();
+  // Test for success to make a chat room
+  ostringstream_t buf;
+  buf << UU("chatroom");
+  value body_data;
+  body_data[UU("chat_room")] = value::string(UU("abcdef") + 
+                                             kParsingDelimeterChatDb);
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response =
+    http_client_->request(http::methods::POST,
+      uri::encode_uri(buf.str()), body_data).get();
+  EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
+}
+
+TEST_F(ChatServerTest, Post_CreateChatRoom_Fail_Duplicate_ChatRoom) {
+  string_t session_id = PerformSuccessfulLogin();
   //Test for making duplicated chat room
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatroom" << UU("?chat_room=") << "1"
-      << UU("&session_id=") << session_id_;
-  response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+  ostringstream_t buf;
+  buf << UU("chatroom");
+  value body_data;
+  body_data[UU("chat_room")] = value::string(UU("1"));
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response =
+      http_client_->request(http::methods::POST,
+          uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
 }
 
 TEST_F(ChatServerTest, Post_CreateChatRoom_Fail_NoChatRoomParameter) {
-  ostringstream_t buf;
-  // Login process for obtaining session ID
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
-  http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
-  EXPECT_EQ(response.status_code(), http::status_codes::OK);
-  value object = response.extract_json().get();
-  string_t session_id_ = object[UU("session_id")].as_string();
-
+  string_t session_id = PerformSuccessfulLogin();
   //Test for missing chat room parameter
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatroom" << UU("?session_id=") << session_id_;
-  response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+  ostringstream_t buf;
+  buf << UU("chatroom");
+  value body_data;
+  body_data[UU("session_id")] = value::string(session_id);
+  http_response response =
+      http_client_->request(http::methods::POST,
+          uri::encode_uri(buf.str()), body_data).get();
   EXPECT_EQ(response.status_code(), http::status_codes::BadRequest);
 }
 
 TEST_F(ChatServerTest, Post_CreateChatRoom_Fail_InvalidSessionId) {
-  ostringstream_t buf;
-  // Login process for obtaining session ID
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
-  http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
-  EXPECT_EQ(response.status_code(), http::status_codes::OK);
-  value object = response.extract_json().get();
-  string_t session_id_ = object[UU("session_id")].as_string();
-
+  string_t session_id = PerformSuccessfulLogin();
   //Test for invalid session ID
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatroom" << UU("?chat_room=") << "1"
-      << UU("&session_id=") << "invalid";
-  response = http_client_->request(http::methods::POST,
-      uri::encode_uri(buf.str())).get();
+  ostringstream_t buf;
+  buf << UU("chatroom");
+  value body_data;
+  body_data[UU("chat_room")] = value::string(UU("987"));
+  body_data[UU("session_id")] = value::string(UU("invalid session id"));
+  http_response response =
+      http_client_->request(http::methods::POST,
+          uri::encode_uri(buf.str()), body_data).get();
   string_t body =
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::Forbidden);
@@ -480,24 +595,16 @@ TEST_F(ChatServerTest, Post_CreateChatRoom_Fail_InvalidSessionId) {
 }
 
 TEST_F(ChatServerTest, Post_CreateChatRoom_Fail_NoSessionId) {
-  ostringstream_t buf;
-  // Login process for obtaining session ID
-  const string_t nonce = GenerateNonce();
-  buf << "login" << UU("?id=") << "kaist" << UU("&nonce=") << nonce
-      << UU("&password=") << HashLoginPassword(UU("12345678"), nonce);
-  http_response response = http_client_->request(
-      http::methods::POST, uri::encode_uri(buf.str())).get();
-  EXPECT_EQ(response.status_code(), http::status_codes::OK);
-  value object = response.extract_json().get();
-  string_t session_id_ = object[UU("session_id")].as_string();
-
+  string_t session_id = PerformSuccessfulLogin();
   //Test for missing session ID
-  buf.str(UU(""));
-  buf.clear();
-  buf << "chatroom" << UU("?chat_room=") << "1";
-  response = http_client_->request(http::methods::POST,
-                                   uri::encode_uri(buf.str())).get();
-  string_t body = 
+  ostringstream_t buf;
+  buf << UU("chatroom");
+  value body_data;
+  body_data[UU("chat_room")] = value::string(UU("987"));
+  http_response response =
+      http_client_->request(http::methods::POST,
+          uri::encode_uri(buf.str()), body_data).get();
+  string_t body =
       response.content_ready().get().extract_utf16string(true).get();
   EXPECT_EQ(response.status_code(), http::status_codes::Forbidden);
   EXPECT_EQ(body, UU("Not a valid session ID"));

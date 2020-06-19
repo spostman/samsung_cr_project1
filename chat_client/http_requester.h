@@ -24,21 +24,38 @@ namespace chatclient {
    public:
     HttpRequester(utility::string_t chat_server_url);
 
-    // Make an HTTP request to the chat server using given parameters.
-    // This function process failure of HTTP request
-    // by calling ProcessHttpResponseFailure.
-    // This function returns whether the HTTP request was a success.
+    // Make an HTTP request to the chat server using given parameters. This
+    // function process failure of HTTP request by calling
+    // ProcessHttpResponseFailure. This function returns whether the HTTP
+    // request was a success.
     web::http::status_code MakeHttpRequest(
         utility::string_t http_method,
         utility::string_t query_url) const;
 
-    // Make an HTTP request to the chat server using given parameters.
-    // This function process failure of HTTP request
-    // by calling ProcessHttpResponseFailure.
-    // This function returns http_response.
+    // Make an HTTP request to the chat server using given parameters. It saves
+    // the body_data into body of the HTTP request. This function process
+    // failure of HTTP request by calling ProcessHttpResponseFailure. This
+    // function returns whether the HTTP request was a success.
+    web::http::status_code MakeHttpRequest(
+        utility::string_t http_method,
+        utility::string_t query_url,
+        const web::json::value& body_data) const;
+
+    // Make an HTTP request to the chat server using given parameters. This
+    // function process failure of HTTP request by calling
+    // ProcessHttpResponseFailure. This function returns http_response.
     web::http::http_response MakeHttpRequestForResponse(
         utility::string_t http_method,
         utility::string_t query_url) const;
+
+    // Make an HTTP request to the chat server using given parameters. It saves
+    // the body_data into body of the HTTP request. This function process
+    // failure of HTTP request by calling ProcessHttpResponseFailure. This
+    // function returns http_response.
+    web::http::http_response MakeHttpRequestForResponse(
+        utility::string_t http_method,
+        utility::string_t query_url,
+        const web::json::value& body_data) const;
 
     // Hash string.
     utility::string_t HashString(utility::string_t string) const;
@@ -48,7 +65,8 @@ namespace chatclient {
 
    private:
     // This function print error message when an HTTP request fails
-    void ProcessHttpResponseFailure(web::http::http_response) const;
+    void ProcessHttpResponseFailure(
+        const web::http::http_response& response) const;
 
     // HTTP_client: can make an HTTP request to a chat server
     std::unique_ptr<web::http::client::http_client> http_client_;

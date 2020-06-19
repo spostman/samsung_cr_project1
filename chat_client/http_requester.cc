@@ -12,6 +12,7 @@ using ::web::http::methods;
 using ::web::http::http_response;
 using ::web::http::status_codes;
 using ::web::http::status_code;
+using ::web::json::value;
 using ::utility::string_t;
 using ::utility::conversions::to_string_t;
 
@@ -31,8 +32,8 @@ namespace chatclient {
         web::http::uri_builder(chat_server_url).to_uri());
   }
 
-  status_code HttpRequester::MakeHttpRequest(const string_t http_method,
-                                             const string_t query_url) const {
+  status_code HttpRequester::MakeHttpRequest(string_t http_method,
+                                             string_t query_url) const {
     const http_response response = 
         http_client_->request(http_method,
                               uri::encode_uri(query_url)).get();
@@ -41,13 +42,40 @@ namespace chatclient {
     }
     return response.status_code();
   }
+
+  status_code HttpRequester::MakeHttpRequest(string_t http_method,
+                                             string_t query_url,
+                                             const value& body_data) const {
+    const http_response response =
+        http_client_->request(http_method,
+            uri::encode_uri(query_url), body_data).get();
+    if (response.status_code() != status_codes::OK) {
+      ProcessHttpResponseFailure(response);
+    }
+    return response.status_code();
+  }
   
   http_response HttpRequester::MakeHttpRequestForResponse(
-      const string_t http_method,
-      const string_t query_url) const {
+      string_t http_method,
+      string_t query_url) const {
     const http_response response = 
         http_client_->request(http_method, 
                               uri::encode_uri(query_url)).get();
+    if (response.status_code() != status_codes::OK) {
+      ProcessHttpResponseFailure(response);
+    }
+    return response;
+  }
+
+  http_response HttpRequester::MakeHttpRequestForResponse(
+      string_t http_method,
+      string_t query_url,
+      const value& body_data) const {
+    const http_response response = http_client_->request(
+        http_method,
+        uri::encode_uri(query_url), 
+        body_data).get();
+
     if (response.status_code() != status_codes::OK) {
       ProcessHttpResponseFailure(response);
     }
@@ -67,7 +95,7 @@ namespace chatclient {
   }
 
   void HttpRequester::ProcessHttpResponseFailure(
-    const http_response response) const {
+      const http_response& response) const {
     const string_t body =
         response.content_ready().get().extract_utf16string(true).get();
     ucout << "HTTP error response " << response.status_code();

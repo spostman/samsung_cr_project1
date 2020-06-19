@@ -127,7 +127,7 @@ TEST_F(ChatClientTest, LoginTest_Success) {
   chat_client_ = GetChatClient();
   string_t standard_output = GetStandardOutputFromChatClient(chat_client_);
   fclose(f1);
-  EXPECT_NE(string_t::npos, standard_output.find(UU("Success to login")));
+  EXPECT_NE(string_t::npos, standard_output.find(UU("Succeed to login")));
   EXPECT_EQ(GetSessionID().length(), 32);
   EXPECT_EQ(UU("kaist"), GetUserID());
   EXPECT_EQ(ChatClient::kAfterLogin, GetClientCurrentStatus());

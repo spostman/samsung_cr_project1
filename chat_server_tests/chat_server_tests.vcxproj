@@ -81,6 +81,7 @@
   <ItemGroup>
     <ClCompile Include="account_database_test.cc" />
     <ClCompile Include="chat_database_test.cc" />
+    <ClCompile Include="chat_server_admin_test.cc" />
     <ClCompile Include="chat_server_test_delete_methods.cc" />
     <ClCompile Include="chat_server_test_get_methods.cc" />
     <ClCompile Include="chat_server_test_post_methods.cc" />
@@ -102,6 +103,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="chat_server_admin_test_fixture.h" />
     <ClInclude Include="chat_server_test_fixture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

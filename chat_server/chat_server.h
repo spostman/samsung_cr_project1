@@ -80,47 +80,47 @@ namespace chatserver {
 
     // Processes ResetAPI POST requests that change server internal states.
     // It handles for account creations, login, accepting chat message, and
-    // creating chat rooms.
+    // creating chat rooms. POST requests must include data in the body.
     // RestAPI URL forms:
-    // 1) make account: http://server_url/account?id=[]&pwd=[]
-    // 2) login: http://server_url/login?id=[]&pwd=[]
+    // 1) make account: http://server_url/account
+    // 2) login: http://server_url/login
     // 3) make chat message:
-    //    http://server_url/chatmessage?chat_message=[]&chat_room=[]&session_id=[]
+    //    http://server_url/chatmessage
     // 4) make chat room:
-    //    http://server_url/chatroom?chat_room=[]&session_id=[]
+    //    http://server_url/chatroom
     void HandlePost(const web::http::http_request& message);
 
     // Process incoming POST HTTP request for sign-up.
     // <Parameter description>
     //  - message: Can make an HTTP reply to the incoming HTTP request.
-    //  - url_queries: Hold query string of the incoming HTTP request URL.
+    //  - body_data: Hold body data of the incoming HTTP request as JSON format.
     void ProcessPostSignUpRequest(
         const web::http::http_request& message, 
-        const std::map<utility::string_t, utility::string_t>& url_queries);
+        const web::json::value& body_data);
 
     // Process incoming POST HTTP request for login.
     // <Parameter description>
     //  - message: Can make an HTTP reply to the incoming HTTP request.
-    //  - url_queries: Hold query string of the incoming HTTP request URL.
+    //  - body_data: Hold body data of the incoming HTTP request as JSON format.
     void ProcessPostLoginRequest(
         const web::http::http_request& message,
-        const std::map<utility::string_t, utility::string_t>& url_queries);
+        const web::json::value& body_data);
 
     // Process incoming POST HTTP request for chat message input.
     // <Parameter description>
     //  - message: Can make an HTTP reply to the incoming HTTP request.
-    //  - url_queries: Hold query string of the incoming HTTP request URL.
+    //  - body_data: Hold body data of the incoming HTTP request as JSON format.
     void ProcessPostInputChatMessageRequest(
         const web::http::http_request& message, 
-        const std::map<utility::string_t, utility::string_t>& url_queries);
+        const web::json::value& body_data);
 
     // Process incoming POST HTTP request for creating a chat room.
     // <Parameter description>
     //  - message: Can make an HTTP reply to the incoming HTTP request.
-    //  - url_queries: Hold query string of the incoming HTTP request URL.
+    //  - body_data: Hold body data of the incoming HTTP request as JSON format.
     void ProcessCreateChatRoomRequest(
         const web::http::http_request& message, 
-        const std::map<utility::string_t, utility::string_t>& url_queries);
+        const web::json::value& body_data);
 
     // Listen to HTTP DELETE requests.
     // Mainly provides API to remove data in the web server.
@@ -143,8 +143,13 @@ namespace chatserver {
 
     // Check the given session ID is valid or not. If the session is valid,
     // renew the alive time of the session.
-    bool IsValidSession(
+    bool CheckAndUpdateValidSession(
         const std::map<utility::string_t, utility::string_t>& url_queries);
+
+    // Check the given session ID is valid or not. If the session is valid,
+    // renew the alive time of the session.
+    bool CheckAndUpdateValidSession(
+        const web::json::value& body_data);
 
     // HTTP_listener: can listen to HTTP requests.
     web::http::experimental::listener::http_listener listener_;
