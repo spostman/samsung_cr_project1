@@ -16,12 +16,15 @@ namespace chatservertests {
    protected:
     std::unique_ptr<chatserver::ChatServer> chat_server_;
     std::unique_ptr<web::http::client::http_client> http_client_;
+    std::unique_ptr<chatserver::SessionManager> session_manager_;
 
-    // Length of nonce
+    // Length of nonce.
     const size_t kNonceLength = 10;
     // Nonce seed.
     const utility::string_t kNonceValue = UU(
         "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+    // Session alive time.
+    const time_t kSessionAliveTime = 1;
 
     void SetUp() override {
       // Create chat message file for ChatDatabase class.
@@ -59,7 +62,8 @@ namespace chatservertests {
       account_database_ = std::make_unique<chatserver::AccountDatabase>();
       account_database_->Initialize(UU("accounts_test_chat_server.txt"));
 
-      session_manager_ = std::make_unique<chatserver::SessionManager>();
+      session_manager_ = 
+          std::make_unique<chatserver::SessionManager>(kSessionAliveTime);
 
       // Start the chat server.
       chat_server_ =
@@ -95,7 +99,8 @@ namespace chatservertests {
     utility::string_t GenerateNonce() const {
       std::random_device device;
       std::mt19937 generator(device());
-      std::uniform_int_distribution<int> distribution(0, kNonceValue.size() - 1);
+      std::uniform_int_distribution<int> distribution(0, 
+                                                      kNonceValue.size() - 1);
       utility::string_t result;
       for (size_t i = 0; i < 10; i++) {
         result += kNonceValue.at(distribution(generator));
@@ -124,7 +129,6 @@ namespace chatservertests {
    private:
     std::unique_ptr<chatserver::ChatDatabase> chat_database_;
     std::unique_ptr<chatserver::AccountDatabase> account_database_;
-    std::unique_ptr<chatserver::SessionManager> session_manager_;
   };
 
 } // namespace chatservertests

@@ -8,6 +8,7 @@
 #include "chat_server_admin_test_fixture.h"
 
 using namespace std;
+using namespace chrono;
 using namespace utility;
 using namespace chatserver;
 using namespace chatservertests;
@@ -185,6 +186,20 @@ TEST_F(ChatServerAdminTest, Delete_Logout_Success) {
   http_response response = http_client_->request(http::methods::DEL,
       uri::encode_uri(buf.str())).get();
   EXPECT_EQ(response.status_code(), http::status_codes::OK);
+}
+
+TEST_F(ChatServerAdminTest, Session_Expire_Test) {
+  const string_t session_id = PerformSuccessfulLogin();
+  // Check session existence.
+  EXPECT_EQ(true, session_manager_->IsExistSessionId(session_id));
+
+  // Wait and check if session expired. A better way of doing unit testing is
+  // to implement a mock method for erasing sessions and inject this method for
+  // the unit testing and check whether the mock method is called.
+  const time_t wait_time = 2;
+  const seconds interval(wait_time);
+  this_thread::sleep_for(duration_cast<seconds>(interval));
+  EXPECT_EQ(false, session_manager_->IsExistSessionId(session_id));
 }
 
 TEST_F(ChatServerAdminTest, EndToEndTest_OneClient) {

@@ -19,7 +19,7 @@ using ::spdlog::info;
 
 namespace chatserver {
 
-  // Session alive time (second).
+  // Default session alive time (second).
   const time_t kSessionAliveTime = 30;
   // Length of session id.
   const size_t kSessionLength = 32;
@@ -29,9 +29,13 @@ namespace chatserver {
   const string_t kSessionValue = UU(
       "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
 
-  SessionManager::SessionManager()
+  SessionManager::SessionManager() : SessionManager(kSessionAliveTime) {
+  }
+
+  SessionManager::SessionManager(time_t session_alive_time)
       : rand_(std::random_device{}()),
-        session_generator_(0, kSessionValue.size() - 1) {
+        session_generator_(0, kSessionValue.size() - 1),
+        session_alive_time_(session_alive_time) {
   }
 
   SessionManager::~SessionManager() {
@@ -134,7 +138,7 @@ namespace chatserver {
           duration<double> diff = current_time -
             system_clock::from_time_t(
                 it->second.last_activity_time);
-          if (diff.count() > kSessionAliveTime) {
+          if (diff.count() > session_alive_time_) {
             info("Delete expired session: {}", 
                 to_utf8string(it->second.user_id));
             user_id_to_session_id_.erase(it->second.user_id);

@@ -43,8 +43,11 @@ namespace chatserver {
 
   class SessionManager {
    public:
-    // Close the thread for the session expire when the class is ended.
+    // Call SessionManager(kSessionAliveTime).
     SessionManager();
+
+    // Initialize random generate variables. Set session_alive_time_.
+    SessionManager(time_t session_alive_time);
 
     // Close the thread for the session expire when the class is ended.
     ~SessionManager();
@@ -95,6 +98,9 @@ namespace chatserver {
     // Internal members to generate randomized identifiers.
     std::mt19937 rand_;
     std::uniform_int_distribution<> session_generator_;
+
+    // Session alive time (second).
+    time_t session_alive_time_;
   };
 
 } // namespace chatserver
